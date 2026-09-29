@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-const force = process.argv.includes("--reset");
+const force = process.argv.includes("--reset") || process.env.TOURNAMENT_RESET === "1";
 
 async function main() {
   const existing = await prisma.team.count();
