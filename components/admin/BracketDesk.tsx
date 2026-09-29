@@ -166,11 +166,11 @@ function Band({
       {places.length === 0 ? (
         <p className="rounded-xl bg-sheet px-4 py-5 text-[14px]">No games on this side yet.</p>
       ) : (
-        <div className="overflow-x-auto pb-1">
+        <div className="overflow-x-hidden pb-1">
           <div
-            className="grid w-max gap-x-4"
+            className="grid w-full gap-x-3"
             style={{
-              gridTemplateColumns: `repeat(${columns.length}, 14.5rem)`,
+              gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
               gridTemplateRows: `auto repeat(${rowCount}, minmax(6.75rem, auto))`,
             }}
           >
@@ -276,7 +276,7 @@ function GameCard({
           )}
         </span>
       </button>
-      {connect && <span aria-hidden className="absolute top-1/2 -right-4 h-0.5 w-4 bg-tape" />}
+      {connect && <span aria-hidden className="absolute top-1/2 -right-3 h-0.5 w-3 bg-tape" />}
     </div>
   );
 }
