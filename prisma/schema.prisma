@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Team {
+  id        Int    @id @default(autoincrement())
+  name      String
+  shortName String
+  seed      Int
+
+  matchesA Match[] @relation("TeamA")
+  matchesB Match[] @relation("TeamB")
+  wins     Match[] @relation("Winner")
+}
+
+/// A match slot in the bracket. `id` is the short game code shown to people ("W3", "L2", "F1").
+model Match {
+  id         String    @id
+  order      Int
+  side       String // "winners" | "losers" | "final"
+  round      Int
+  roundLabel String
+  court      String?
+  startsAt   DateTime?
+  status     String    @default("scheduled") // "scheduled" | "live" | "final" | "bye"
+
+  teamAId Int?
+  teamA   Team? @relation("TeamA", fields: [teamAId], references: [id], onDelete: SetNull)
+  teamBId Int?
+  teamB   Team? @relation("TeamB", fields: [teamBId], references: [id], onDelete: SetNull)
+
+  /// Completed sets as [[a, b], ...]
+  sets    Json @default("[]")
+  pointsA Int  @default(0)
+  pointsB Int  @default(0)
+
+  winnerId Int?
+  winner   Team?   @relation("Winner", fields: [winnerId], references: [id], onDelete: SetNull)
+  advanced Boolean @default(false)
+
+  winnerToId   String?
+  winnerToSlot String? // "A" | "B"
+  loserToId    String?
+  loserToSlot  String?
+
+  /// The if-necessary second final. Filled by the admin, never automatically.
+  isReset Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+}
+
+model Announcement {
+  id        Int      @id @default(autoincrement())
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Settings {
+  id             Int  @id @default(1)
+  setsToWin      Int  @default(2)
+  setTarget      Int  @default(25)
+  decidingTarget Int  @default(15)
+  winBy          Int  @default(2)
+  cap            Int?
+  version        Int  @default(0)
+}

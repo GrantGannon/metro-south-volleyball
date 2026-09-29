@@ -1,0 +1,46 @@
+{
+  "_note": "Placeholder draw. Replace team names, times, courts, and links with the real schedule. Times are US Central (-05:00). Seeding only runs on an empty database.",
+  "teams": [
+    { "seed": 1, "name": "Team 1", "shortName": "T1" },
+    { "seed": 2, "name": "Team 2", "shortName": "T2" },
+    { "seed": 3, "name": "Team 3", "shortName": "T3" },
+    { "seed": 4, "name": "Team 4", "shortName": "T4" },
+    { "seed": 5, "name": "Team 5", "shortName": "T5" },
+    { "seed": 6, "name": "Team 6", "shortName": "T6" },
+    { "seed": 7, "name": "Team 7", "shortName": "T7" },
+    { "seed": 8, "name": "Team 8", "shortName": "T8" },
+    { "seed": 9, "name": "Team 9", "shortName": "T9" },
+    { "seed": 10, "name": "Team 10", "shortName": "T10" }
+  ],
+  "matches": [
+    { "id": "B1", "side": "winners", "round": 1, "roundLabel": "Opening round", "status": "bye", "teamA": 1, "winnerTo": ["W7", "A"] },
+    { "id": "B2", "side": "winners", "round": 1, "roundLabel": "Opening round", "status": "bye", "teamA": 2, "winnerTo": ["W6", "A"] },
+    { "id": "B3", "side": "winners", "round": 1, "roundLabel": "Opening round", "status": "bye", "teamA": 3, "winnerTo": ["W5", "A"] },
+    { "id": "B4", "side": "winners", "round": 1, "roundLabel": "Opening round", "status": "bye", "teamA": 4, "winnerTo": ["W4", "A"] },
+
+    { "id": "W1", "side": "winners", "round": 1, "roundLabel": "Opening round", "court": "Court 1", "startsAt": "2026-10-02T17:00:00-05:00", "teamA": 5, "teamB": 10, "winnerTo": ["W4", "B"], "loserTo": ["L1", "A"] },
+    { "id": "W2", "side": "winners", "round": 1, "roundLabel": "Opening round", "court": "Court 2", "startsAt": "2026-10-02T17:00:00-05:00", "teamA": 6, "teamB": 9, "winnerTo": ["W5", "B"], "loserTo": ["L1", "B"] },
+    { "id": "W3", "side": "winners", "round": 1, "roundLabel": "Opening round", "court": "Court 1", "startsAt": "2026-10-02T18:00:00-05:00", "teamA": 7, "teamB": 8, "winnerTo": ["W6", "B"], "loserTo": ["L2", "A"] },
+
+    { "id": "W4", "side": "winners", "round": 2, "roundLabel": "Quarterfinals", "court": "Court 2", "startsAt": "2026-10-02T18:00:00-05:00", "winnerTo": ["W7", "B"], "loserTo": ["L2", "B"] },
+    { "id": "W5", "side": "winners", "round": 2, "roundLabel": "Quarterfinals", "court": "Court 1", "startsAt": "2026-10-02T19:00:00-05:00", "winnerTo": ["W8", "A"], "loserTo": ["L3", "A"] },
+    { "id": "W6", "side": "winners", "round": 2, "roundLabel": "Quarterfinals", "court": "Court 2", "startsAt": "2026-10-02T19:00:00-05:00", "winnerTo": ["W8", "B"], "loserTo": ["L4", "A"] },
+
+    { "id": "W7", "side": "winners", "round": 3, "roundLabel": "Semifinals", "court": "Court 1", "startsAt": "2026-10-03T09:00:00-05:00", "winnerTo": ["W9", "A"], "loserTo": ["L5", "A"] },
+    { "id": "W8", "side": "winners", "round": 3, "roundLabel": "Semifinals", "court": "Court 2", "startsAt": "2026-10-03T09:00:00-05:00", "winnerTo": ["W9", "B"], "loserTo": ["L6", "A"] },
+
+    { "id": "W9", "side": "winners", "round": 4, "roundLabel": "Winners final", "court": "Court 1", "startsAt": "2026-10-03T12:00:00-05:00", "winnerTo": ["F1", "A"], "loserTo": ["L8", "A"] },
+
+    { "id": "L1", "side": "losers", "round": 1, "roundLabel": "Losers round 1", "court": "Court 1", "startsAt": "2026-10-02T20:00:00-05:00", "winnerTo": ["L3", "B"] },
+    { "id": "L2", "side": "losers", "round": 1, "roundLabel": "Losers round 1", "court": "Court 2", "startsAt": "2026-10-02T20:00:00-05:00", "winnerTo": ["L4", "B"] },
+    { "id": "L3", "side": "losers", "round": 2, "roundLabel": "Losers round 2", "court": "Court 1", "startsAt": "2026-10-03T08:00:00-05:00", "winnerTo": ["L5", "B"] },
+    { "id": "L4", "side": "losers", "round": 2, "roundLabel": "Losers round 2", "court": "Court 2", "startsAt": "2026-10-03T08:00:00-05:00", "winnerTo": ["L6", "B"] },
+    { "id": "L5", "side": "losers", "round": 3, "roundLabel": "Losers round 3", "court": "Court 1", "startsAt": "2026-10-03T10:00:00-05:00", "winnerTo": ["L7", "A"] },
+    { "id": "L6", "side": "losers", "round": 3, "roundLabel": "Losers round 3", "court": "Court 2", "startsAt": "2026-10-03T10:00:00-05:00", "winnerTo": ["L7", "B"] },
+    { "id": "L7", "side": "losers", "round": 4, "roundLabel": "Losers semifinal", "court": "Court 1", "startsAt": "2026-10-03T11:00:00-05:00", "winnerTo": ["L8", "B"] },
+    { "id": "L8", "side": "losers", "round": 5, "roundLabel": "Losers final", "court": "Court 1", "startsAt": "2026-10-03T13:00:00-05:00", "winnerTo": ["F1", "B"] },
+
+    { "id": "F1", "side": "final", "round": 1, "roundLabel": "Championship", "court": "Court 1", "startsAt": "2026-10-03T14:00:00-05:00" },
+    { "id": "F2", "side": "final", "round": 2, "roundLabel": "Championship (if necessary)", "court": "Court 1", "startsAt": "2026-10-03T15:00:00-05:00", "isReset": true }
+  ]
+}
