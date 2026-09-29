@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatTime } from "@/lib/format";
 import { useTournament } from "./TournamentProvider";
+import { useMyTeam } from "./useMyTeam";
 
 const TABS = [
   { href: "/", label: "Now" },
@@ -35,26 +36,29 @@ export function Header() {
 
 export function BottomNav() {
   const path = usePathname();
+  const [myTeam] = useMyTeam();
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-tape/15 bg-sheet/95 backdrop-blur pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-x-0 bottom-0 z-20 border-t-4 border-tape bg-sheet pb-[env(safe-area-inset-bottom)]"
       aria-label="Sections"
     >
       <ul className="mx-auto grid max-w-xl grid-cols-4">
         {TABS.map((t) => {
           const active = t.href === "/" ? path === "/" : path.startsWith(t.href);
+          const needsPick = t.href === "/my-team" && myTeam == null;
           return (
             <li key={t.href}>
               <Link
                 href={t.href}
                 aria-current={active ? "page" : undefined}
                 className={[
-                  "flex h-14 flex-col items-center justify-center text-[13px] font-semibold",
+                  "relative flex h-16 flex-col items-center justify-center text-[14px] font-semibold whitespace-nowrap",
                   active ? "text-tape" : "text-ink/55",
                 ].join(" ")}
               >
-                <span className={["mb-1 h-[3px] w-8 rounded-full", active ? "bg-tape" : "bg-transparent"].join(" ")} aria-hidden />
+                <span className={["mb-1 h-1 w-8 rounded-full", active ? "bg-tape" : "bg-transparent"].join(" ")} aria-hidden />
                 {t.label}
+                {needsPick && <span className="absolute top-2 right-[22%] size-2 rounded-full bg-whistle" aria-hidden />}
               </Link>
             </li>
           );

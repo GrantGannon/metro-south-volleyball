@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/admin/actions";
 import { useTournament } from "../TournamentProvider";
+import { useBracketDesk } from "./AdminFrame";
 
 const LINKS = [
   { href: "/admin", label: "Games" },
@@ -15,10 +16,12 @@ const LINKS = [
 export function AdminNav() {
   const path = usePathname();
   const { connected } = useTournament();
+  const wide = useBracketDesk();
+  const frame = wide ? "mx-auto w-full max-w-xl px-4 lg:max-w-[90rem] lg:px-6" : "mx-auto max-w-xl px-4";
 
   return (
     <header className="sticky top-0 z-20 bg-tape text-sheet pt-[env(safe-area-inset-top)]">
-      <div className="mx-auto flex max-w-xl items-center justify-between px-4 pt-3">
+      <div className={`${frame} flex items-center justify-between pt-3`}>
         <p className="text-[15px] font-bold">
           Metro-South <span className="font-medium text-sheet/70">· Scorer’s table</span>
         </p>
@@ -31,7 +34,7 @@ export function AdminNav() {
           </form>
         </div>
       </div>
-      <nav className="mx-auto grid max-w-xl grid-cols-4 px-2" aria-label="Admin">
+      <nav className={wide ? "mx-auto grid w-full max-w-xl grid-cols-4 px-2 lg:flex lg:max-w-[90rem] lg:px-4" : "mx-auto grid max-w-xl grid-cols-4 px-2"} aria-label="Admin">
         {LINKS.map((l) => {
           const active = l.href === "/admin" ? path === "/admin" || path.startsWith("/admin/match") : path.startsWith(l.href);
           return (
@@ -41,6 +44,7 @@ export function AdminNav() {
               aria-current={active ? "page" : undefined}
               className={[
                 "flex min-h-12 items-center justify-center border-b-4 text-[14px] font-semibold",
+                wide ? "lg:px-5" : "",
                 active ? "border-sheet" : "border-transparent text-sheet/70",
               ].join(" ")}
             >
