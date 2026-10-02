@@ -59,7 +59,7 @@ function Row({ match: m }: { match: MatchDTO }) {
   const { snapshot, teams } = useTournament();
   const name = (side: Side) => {
     const id = side === "A" ? m.teamAId : m.teamBId;
-    return id ? teams.get(id)?.name : feederLabel(snapshot.matches, m.id, side) ?? (m.status === "bye" ? "Bye" : "TBD");
+    return id ? teams.get(id)?.name : feederLabel(snapshot.matches, m.id, side, teams) ?? (m.status === "bye" ? "Bye" : "TBD");
   };
   const w = setsWon(m.sets);
   const score =

@@ -294,7 +294,7 @@ function SlotLine({
 }) {
   const teamId = slot === "A" ? m.teamAId : m.teamBId;
   const team = teamId ? teams.get(teamId) : null;
-  const feed = feederLabel(all, m.id, slot);
+  const feed = feederLabel(all, m.id, slot, teams);
   const text = team ? `${team.seed} ${team.name}` : feed ?? "Open";
   return (
     <span className="flex min-w-0 items-baseline gap-1.5">

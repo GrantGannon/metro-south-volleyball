@@ -116,15 +116,40 @@ export function champion(matches: MatchDTO[]): number | null {
   return null;
 }
 
-/** "Winner of W1" style labels for slots whose team isn't known yet. */
-export function feederLabel(matches: MatchDTO[], id: string, slot: Side): string | null {
+type NamedTeams = { get(id: number): { name: string } | undefined };
+
+/** "Simmons v Hewitt" when those schools are known, otherwise the game code. */
+export function matchupName(match: MatchDTO, teams?: NamedTeams): string {
+  const name = (id: number | null) => (id && teams ? teams.get(id)?.name : null) ?? null;
+  const a = name(match.teamAId);
+  const b = match.status === "bye" ? null : name(match.teamBId);
+  if (a && b) return `${a} v ${b}`;
+  if (a || b) return (a ?? b) as string;
+  return match.id;
+}
+
+/** "Loser of Simmons v Hewitt" for a slot still waiting on another game. */
+export function feederLabel(
+  matches: MatchDTO[],
+  id: string,
+  slot: Side,
+  teams?: NamedTeams,
+): string | null {
   for (const m of matches) {
-    if (m.winnerToId === id && m.winnerToSlot === slot) return m.status === "bye" ? null : `Winner of ${m.id}`;
-    if (m.loserToId === id && m.loserToSlot === slot) return `Loser of ${m.id}`;
+    if (m.winnerToId === id && m.winnerToSlot === slot) return m.status === "bye" ? null : `Winner of ${matchupName(m, teams)}`;
+    if (m.loserToId === id && m.loserToSlot === slot) return `Loser of ${matchupName(m, teams)}`;
   }
   const reset = matches.find((m) => m.id === id);
   if (reset?.isReset) return "If needed";
   return null;
+}
+
+/** Team name, or the winner/loser matchup still headed for this side. */
+export function slotLabel(matches: MatchDTO[], teams: NamedTeams, match: MatchDTO, slot: Side): string {
+  if (match.status === "bye" && slot === "B") return "bye";
+  const id = slot === "A" ? match.teamAId : match.teamBId;
+  if (id) return teams.get(id)?.name ?? "Open";
+  return feederLabel(matches, match.id, slot, teams) ?? "Open";
 }
 
 export function teamMap(teams: TeamDTO[]): Map<number, TeamDTO> {

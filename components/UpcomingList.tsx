@@ -19,7 +19,7 @@ export function UpcomingList({ matches, highlightTeamId }: { matches: MatchDTO[]
         </span>
       );
     }
-    return <span className="italic text-ink/55">{feederLabel(snapshot.matches, m.id, side) ?? "To be decided"}</span>;
+    return <span className="italic text-ink/55">{feederLabel(snapshot.matches, m.id, side, teams) ?? "To be decided"}</span>;
   };
 
   return (

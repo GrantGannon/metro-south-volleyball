@@ -4,10 +4,43 @@ import { useState } from "react";
 import { addMatch, deleteMatch, updateMatch, updateTeam, type MatchEdit } from "@/app/admin/actions";
 import { btn, ErrorNote, field, useAdminAction } from "@/components/admin/useAdminAction";
 import { useTournament } from "@/components/TournamentProvider";
+import { slotLabel } from "@/lib/bracket";
 import { formatDayTime, toLocalInput } from "@/lib/format";
 import type { BracketSide, MatchDTO, MatchStatus, Side, TeamDTO } from "@/lib/types";
 
 const SIDE_LABEL: Record<BracketSide, string> = { winners: "Winners", losers: "Losers", final: "Finals" };
+const SIDE_ORDER: Record<BracketSide, number> = { winners: 0, losers: 1, final: 2 };
+const DAYS = [
+  { value: "2026-10-02", label: "Friday" },
+  { value: "2026-10-03", label: "Saturday" },
+];
+const MINUTES = ["00", "15", "30", "45"];
+
+function splitStart(value: string) {
+  const [datePart, timePart] = (value || "2026-10-02T16:00").split("T");
+  let hour = Number((timePart || "16:00").slice(0, 2));
+  let minute = Number((timePart || "16:00").slice(3, 5));
+  const snapped = Math.round((Number.isFinite(minute) ? minute : 0) / 15) * 15;
+  if (snapped >= 60) {
+    minute = 0;
+    hour = (hour + 1) % 24;
+  } else {
+    minute = snapped;
+  }
+  if (!Number.isFinite(hour)) hour = 16;
+  return {
+    date: datePart || "2026-10-02",
+    hour12: String(hour % 12 || 12),
+    minute: String(minute).padStart(2, "0"),
+    ap: (hour >= 12 ? "PM" : "AM") as "AM" | "PM",
+  };
+}
+
+function joinStart(date: string, hour12: string, minute: string, ap: "AM" | "PM") {
+  let hour = Number(hour12) % 12;
+  if (ap === "PM") hour += 12;
+  return `${date}T${String(hour).padStart(2, "0")}:${minute}`;
+}
 
 export function TeamEditor({ team }: { team: TeamDTO }) {
   const { run, pending, error } = useAdminAction();
@@ -111,29 +144,49 @@ export function MatchEditor({ match: m, panel, onClose }: { match: MatchDTO; pan
     </label>
   );
 
-  const destSelect = (idKey: "winnerToId" | "loserToId", slotKey: "winnerToSlot" | "loserToSlot", label: string, none: string) => (
-    <div className="grid grid-cols-[1fr_5rem] gap-2">
-      <label className="text-[12px] font-semibold text-ink/70">
-        {label}
-        <select value={edit[idKey] ?? ""} onChange={(e) => set(idKey, e.target.value || null)} className={field}>
-          <option value="">{none}</option>
-          {others.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.id} · {teamName(o.teamAId)} / {o.status === "bye" ? "bye" : teamName(o.teamBId)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="text-[12px] font-semibold text-ink/70">
-        Slot
-        <select value={edit[slotKey] ?? ""} onChange={(e) => set(slotKey, (e.target.value || null) as Side | null)} className={field} disabled={!edit[idKey]}>
-          <option value="">–</option>
-          <option value="A">Top</option>
-          <option value="B">Bottom</option>
-        </select>
-      </label>
-    </div>
-  );
+  const destSelect = (idKey: "winnerToId" | "loserToId", slotKey: "winnerToSlot" | "loserToSlot", label: string, none: string) => {
+    const sorted = [...others].sort(
+      (a, b) => SIDE_ORDER[a.side] - SIDE_ORDER[b.side] || a.round - b.round || a.order - b.order,
+    );
+    const groups = new Map<string, MatchDTO[]>();
+    for (const o of sorted) {
+      const key = `${SIDE_LABEL[o.side]} · ${o.roundLabel}`;
+      groups.set(key, [...(groups.get(key) ?? []), o]);
+    }
+    return (
+      <div className="grid grid-cols-[1fr_5.5rem] gap-2">
+        <label className="text-[12px] font-semibold text-ink/70">
+          {label}
+          <select value={edit[idKey] ?? ""} onChange={(e) => set(idKey, e.target.value || null)} className={field}>
+            <option value="">{none}</option>
+            {[...groups.entries()].map(([name, games]) => (
+              <optgroup key={name} label={name}>
+                {games.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.id} · {formatDayTime(o.startsAt)} · {o.court ?? "Court TBD"} · {slotLabel(snapshot.matches, teams, o, "A")} / {slotLabel(snapshot.matches, teams, o, "B")}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+        <label className="text-[12px] font-semibold text-ink/70">
+          Enters
+          <select value={edit[slotKey] ?? ""} onChange={(e) => set(slotKey, (e.target.value || null) as Side | null)} className={field} disabled={!edit[idKey]}>
+            <option value="">–</option>
+            <option value="A">Top</option>
+            <option value="B">Bottom</option>
+          </select>
+        </label>
+      </div>
+    );
+  };
+  const start = splitStart(edit.startsAt);
+  const days = DAYS.some((d) => d.value === start.date) ? DAYS : [{ value: start.date, label: start.date }, ...DAYS];
+  const setStart = (patch: Partial<ReturnType<typeof splitStart>>) => {
+    const next = { ...start, ...patch };
+    set("startsAt", joinStart(next.date, next.hour12, next.minute, next.ap));
+  };
 
   return (
     <div className="space-y-3 rounded-xl bg-sheet p-4 ring-2 ring-tape">
@@ -150,8 +203,43 @@ export function MatchEditor({ match: m, panel, onClose }: { match: MatchDTO; pan
           <input value={edit.court} onChange={(e) => set("court", e.target.value)} className={field} placeholder="Court 1" />
         </label>
         <label className="text-[12px] font-semibold text-ink/70">
-          Start time
-          <input type="datetime-local" value={edit.startsAt} onChange={(e) => set("startsAt", e.target.value)} className={field} />
+          Day
+          <select value={start.date} onChange={(e) => setStart({ date: e.target.value })} className={field}>
+            {days.map((d) => (
+              <option key={d.value} value={d.value}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <label className="text-[12px] font-semibold text-ink/70">
+          Hour
+          <select value={start.hour12} onChange={(e) => setStart({ hour12: e.target.value })} className={field}>
+            {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((h) => (
+              <option key={h} value={h}>
+                {h}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-[12px] font-semibold text-ink/70">
+          Minute
+          <select value={start.minute} onChange={(e) => setStart({ minute: e.target.value })} className={field}>
+            {MINUTES.map((minute) => (
+              <option key={minute} value={minute}>
+                {minute}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-[12px] font-semibold text-ink/70">
+          &nbsp;
+          <select value={start.ap} onChange={(e) => setStart({ ap: e.target.value as "AM" | "PM" })} className={field}>
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
         </label>
       </div>
 

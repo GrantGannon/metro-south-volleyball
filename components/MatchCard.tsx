@@ -88,7 +88,7 @@ export function MatchCard({ match, highlightTeamId, showRouting, renderPoints, f
         {mine && <span className="shrink-0 rounded-full bg-tape px-2 py-0.5 text-[11px] font-semibold text-sheet">Your team</span>}
       </div>
     ) : (
-      <span className="block py-1 text-[15px] italic text-ink/55">{feederLabel(snapshot.matches, match.id, side) ?? "To be decided"}</span>
+      <span className="block py-1 text-[15px] italic text-ink/55">{feederLabel(snapshot.matches, match.id, side, teams) ?? "To be decided"}</span>
     );
 
     const seed = (
