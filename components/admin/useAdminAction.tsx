@@ -25,7 +25,9 @@ export function useAdminAction() {
     [accept],
   );
 
-  return { run, pending, error, clearError: () => setError(null) };
+  const clearError = useCallback(() => setError(null), []);
+
+  return { run, pending, error, clearError };
 }
 
 export function ErrorNote({ error }: { error: string | null }) {

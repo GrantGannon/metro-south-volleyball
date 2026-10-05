@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { addMatch, addTeam, deleteMatch, deleteTeam, updateMatch, updateTeam, type MatchEdit } from "@/app/admin/actions";
+import { useConfirmAction } from "@/components/admin/ConfirmSheet";
 import { btn, ErrorNote, field, useAdminAction } from "@/components/admin/useAdminAction";
 import { useTournament } from "@/components/TournamentProvider";
 import { slotLabel } from "@/lib/bracket";
@@ -39,7 +40,7 @@ function joinStart(date: string, hour12: string, minute: string, ap: "AM" | "PM"
 }
 
 export function TeamEditor({ team }: { team: TeamDTO }) {
-  const { run, pending, error } = useAdminAction();
+  const { run, pending, error, request, sheet } = useConfirmAction();
   const [name, setName] = useState(team.name);
   const [shortName, setShortName] = useState(team.shortName);
   const [seed, setSeed] = useState(String(team.seed));
@@ -71,13 +72,21 @@ export function TeamEditor({ team }: { team: TeamDTO }) {
           type="button"
           className={btn.quiet}
           disabled={pending}
-          onClick={() => {
-            if (confirm(`Remove ${team.name}?`)) run(() => deleteTeam(team.id));
-          }}
+          onClick={() =>
+            request({
+              kicker: `Seed ${team.seed}`,
+              title: "Remove team",
+              body: `${team.name} comes off the draw. A team in a game that already started stays put.`,
+              confirmLabel: "Remove team",
+              tone: "whistle",
+              run: () => deleteTeam(team.id),
+            })
+          }
         >
           Remove
         </button>
       </div>
+      {sheet}
       <div className="mt-2">
         <ErrorNote error={error} />
       </div>
@@ -105,7 +114,7 @@ function toEdit(m: MatchDTO): MatchEdit {
 
 export function MatchEditor({ match: m, panel, onClose }: { match: MatchDTO; panel?: boolean; onClose?: () => void }) {
   const { snapshot, teams } = useTournament();
-  const { run, pending, error } = useAdminAction();
+  const { run, pending, error, request, sheet } = useConfirmAction();
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<MatchEdit>(() => toEdit(m));
   const set = <K extends keyof MatchEdit>(k: K, v: MatchEdit[K]) => setEdit((e) => ({ ...e, [k]: v }));
@@ -301,15 +310,22 @@ export function MatchEditor({ match: m, panel, onClose }: { match: MatchDTO; pan
           type="button"
           className={btn.quiet}
           disabled={pending}
-          onClick={() => {
-            if (confirm(`Delete game ${m.id}? Links pointing to it will be cleared.`)) {
-              run(() => deleteMatch(m.id), () => (panel ? onClose?.() : setOpen(false)));
-            }
-          }}
+          onClick={() =>
+            request({
+              kicker: m.id,
+              title: "Delete game",
+              body: `Game ${m.id} comes off the draw. Links pointing at it will be cleared.`,
+              confirmLabel: "Delete game",
+              tone: "whistle",
+              run: () => deleteMatch(m.id),
+              onOk: () => (panel ? onClose?.() : setOpen(false)),
+            })
+          }
         >
           Delete game
         </button>
       </div>
+      {sheet}
     </div>
   );
 }

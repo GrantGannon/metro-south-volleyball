@@ -13,6 +13,7 @@ import {
   startIfNecessaryGame,
   undoAdvance,
 } from "@/app/admin/actions";
+import { useConfirmAction } from "@/components/admin/ConfirmSheet";
 import { btn, ErrorNote, field, useAdminAction } from "@/components/admin/useAdminAction";
 import { MatchCard } from "@/components/MatchCard";
 import { useTournament } from "@/components/TournamentProvider";
@@ -23,6 +24,7 @@ export default function ScorerPage() {
   const { id } = useParams<{ id: string }>();
   const { snapshot, teams } = useTournament();
   const { run, pending, error } = useAdminAction();
+  const { request: requestClear, sheet: clearSheet, pending: clearPending } = useConfirmAction();
   const m = snapshot.matches.find((x) => x.id === id);
 
   if (!m) {
@@ -79,8 +81,9 @@ export default function ScorerPage() {
     );
   };
 
-  return (
+    return (
     <>
+      {clearSheet}
       <Link href="/admin" className={btn.quiet}>
         ← All games
       </Link>
@@ -107,7 +110,7 @@ export default function ScorerPage() {
         )}
 
         {(m.status === "final" || m.status === "bye") && !m.advanced && (
-          <AdvanceButtons match={m} isFirstFinal={isFirstFinal} run={run} pending={pending} />
+          <AdvanceButtons match={m} isFirstFinal={isFirstFinal} pending={pending} />
         )}
 
         {m.advanced && m.status !== "bye" && (
@@ -133,13 +136,17 @@ export default function ScorerPage() {
           <button
             type="button"
             className={btn.quiet}
-            disabled={pending}
-            onClick={() => {
-              const message = m.forfeit
-                ? `Clear the forfeit for ${m.id} and mark it not started?`
-                : `Clear every set and point for ${m.id} and mark it not started?`;
-              if (confirm(message)) run(() => clearScore(m.id));
-            }}
+            disabled={pending || clearPending}
+            onClick={() =>
+              requestClear({
+                kicker: m.id,
+                title: "Clear the score",
+                body: m.forfeit ? `The forfeit comes off ${m.id}, and the game goes back to not started.` : `Every set and point comes off ${m.id}, and the game goes back to not started.`,
+                confirmLabel: "Clear score",
+                tone: "whistle",
+                run: () => clearScore(m.id),
+              })
+            }
           >
             Clear score
           </button>
@@ -151,15 +158,20 @@ export default function ScorerPage() {
 
 function Forfeit({ match: m }: { match: MatchDTO }) {
   const { teams } = useTournament();
-  const { run, pending, error } = useAdminAction();
+  const { pending, error, request, sheet } = useConfirmAction();
   const top = m.teamAId ? teams.get(m.teamAId) : undefined;
   const bottom = m.teamBId ? teams.get(m.teamBId) : undefined;
   if (!top || !bottom || m.advanced || m.status === "bye") return null;
 
   const award = (winner: typeof top, other: typeof top) => {
     const replacing = m.forfeit || m.sets.length > 0 || m.pointsA > 0 || m.pointsB > 0 || m.status === "final";
-    const message = `${winner.name} wins by forfeit. ${other.name} takes the loss.${replacing ? " This replaces the score." : ""} Advance the winner afterward.`;
-    if (confirm(message)) run(() => forfeitGame(m.id, winner.id));
+    request({
+      kicker: m.id,
+      title: "Forfeit",
+      body: `${winner.name} wins by forfeit. ${other.name} takes the loss.${replacing ? " This replaces the score." : ""} Advance the winner afterward.`,
+      confirmLabel: "Award the win",
+      run: () => forfeitGame(m.id, winner.id),
+    });
   };
 
   return (
@@ -177,51 +189,58 @@ function Forfeit({ match: m }: { match: MatchDTO }) {
       <div className="mt-3">
         <ErrorNote error={error} />
       </div>
+      {sheet}
     </section>
   );
 }
 
-function AdvanceButtons({
-  match: m,
-  isFirstFinal,
-  run,
-  pending,
-}: {
-  match: MatchDTO;
-  isFirstFinal: boolean;
-  run: ReturnType<typeof useAdminAction>["run"];
-  pending: boolean;
-}) {
+function AdvanceButtons({ match: m, isFirstFinal, pending: scoring }: { match: MatchDTO; isFirstFinal: boolean; pending: boolean }) {
   const { teams } = useTournament();
+  const { pending, request, sheet } = useConfirmAction();
   const winner = m.winnerId ? teams.get(m.winnerId) : undefined;
+  const busy = pending || scoring;
   if (!winner) return null;
 
-  if (isFirstFinal && m.winnerId === m.teamBId) {
-    return (
-      <button type="button" className={btn.primary} disabled={pending} onClick={() => run(() => startIfNecessaryGame(m.id))}>
-        Set up the if-necessary game
-      </button>
-    );
-  }
-  if (m.side === "final") {
-    return (
-      <button type="button" className={btn.primary} disabled={pending} onClick={() => run(() => advanceWinner(m.id))}>
-        Confirm {winner.name} as champion
-      </button>
-    );
-  }
+  const loserId = m.winnerId === m.teamAId ? m.teamBId : m.teamAId;
+  const loser = loserId ? teams.get(loserId) : undefined;
+  const moves = [
+    m.winnerToId ? `${winner.name} moves to ${m.winnerToId}.` : `${winner.name} has no next game.`,
+    m.loserToId ? `${loser?.name ?? "The loser"} moves to ${m.loserToId}.` : m.side === "final" ? "" : `${loser?.name ?? "The loser"} is out.`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const ask = isFirstFinal && m.winnerId === m.teamBId
+    ? {
+        title: "If-necessary game",
+        body: `${winner.name} won from the losers bracket. Both champions play again, and the winner of that game takes the tournament.`,
+        confirmLabel: "Set up the game",
+        run: () => startIfNecessaryGame(m.id),
+      }
+    : m.side === "final"
+      ? {
+          title: "Champion",
+          body: `${winner.name} wins the tournament.`,
+          confirmLabel: "Confirm champion",
+          run: () => advanceWinner(m.id),
+        }
+      : {
+          title: "Advance winner",
+          body: moves,
+          confirmLabel: "Advance",
+          run: () => advanceWinner(m.id),
+        };
+
+  const label =
+    isFirstFinal && m.winnerId === m.teamBId ? "Set up the if-necessary game" : m.side === "final" ? `Confirm ${winner.name} as champion` : "Advance winner";
+
   return (
-    <button
-      type="button"
-      className={btn.primary}
-      disabled={pending}
-      onClick={() => {
-        const dest = [m.winnerToId && `${winner.name} to ${m.winnerToId}`, m.loserToId && `loser to ${m.loserToId}`].filter(Boolean).join(", ");
-        if (confirm(`Advance winner: ${dest || winner.name}?`)) run(() => advanceWinner(m.id));
-      }}
-    >
-      Advance winner
-    </button>
+    <>
+      <button type="button" className={btn.primary} disabled={busy} onClick={() => request({ kicker: m.id, tone: "tape", ...ask })}>
+        {label}
+      </button>
+      {sheet}
+    </>
   );
 }
 

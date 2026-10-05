@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { buildGeneratedBracket, updateRules, updateTournament } from "@/app/admin/actions";
 import { AddTeam, TeamEditor } from "@/components/admin/MatchEditor";
+import { useConfirmAction } from "@/components/admin/ConfirmSheet";
 import { btn, ErrorNote, field, useAdminAction } from "@/components/admin/useAdminAction";
 import { useTournament } from "@/components/TournamentProvider";
 import type { BracketFormat } from "@/lib/types";
@@ -85,7 +86,7 @@ function TournamentForm() {
 
 function TeamsForm() {
   const { snapshot } = useTournament();
-  const { run, pending, error } = useAdminAction();
+  const { pending, error, request, sheet } = useConfirmAction();
   const format = snapshot.info.format === "single" ? "single elimination" : "double elimination";
 
   return (
@@ -110,15 +111,21 @@ function TeamsForm() {
         type="button"
         className={`${btn.secondary} mt-3`}
         disabled={pending || snapshot.teams.length < 2}
-        onClick={() => {
-          const warning = snapshot.matches.length
-            ? `Replace all ${snapshot.matches.length} games with a new ${format} bracket?`
-            : `Build a ${format} bracket for ${snapshot.teams.length} teams?`;
-          if (confirm(warning)) run(() => buildGeneratedBracket());
-        }}
+        onClick={() =>
+          request({
+            title: "Build bracket",
+            body: snapshot.matches.length
+              ? `This replaces all ${snapshot.matches.length} games with a new ${format} bracket. Scores already entered will be deleted.`
+              : `This builds a ${format} bracket for ${snapshot.teams.length} teams.`,
+            confirmLabel: snapshot.matches.length ? "Replace games" : "Build bracket",
+            tone: snapshot.matches.length ? "whistle" : "tape",
+            run: () => buildGeneratedBracket(),
+          })
+        }
       >
         Build bracket
       </button>
+      {sheet}
     </section>
   );
 }

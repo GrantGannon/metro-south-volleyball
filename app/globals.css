@@ -62,8 +62,37 @@ body {
   animation: point-flip 220ms ease-out;
 }
 
+@keyframes sheet-up {
+  from {
+    transform: translateY(1.25rem);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.sheet-up {
+  animation: sheet-up 180ms ease-out;
+}
+
+.confirm-dialog {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(16 32 51 / 0.46);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .point-flip {
+  .point-flip,
+  .sheet-up {
     animation: none;
   }
 }

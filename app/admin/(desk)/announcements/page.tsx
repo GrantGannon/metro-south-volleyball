@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { deleteAnnouncement, postAnnouncement } from "@/app/admin/actions";
-import { btn, ErrorNote, field, useAdminAction } from "@/components/admin/useAdminAction";
+import { useConfirmAction } from "@/components/admin/ConfirmSheet";
+import { btn, ErrorNote, field } from "@/components/admin/useAdminAction";
 import { useTournament } from "@/components/TournamentProvider";
 import { formatDayTime } from "@/lib/format";
 
 export default function AnnouncementsAdmin() {
   const { snapshot } = useTournament();
-  const { run, pending, error } = useAdminAction();
+  const { run, pending, error, request, sheet } = useConfirmAction();
   const [body, setBody] = useState("");
   const [posted, setPosted] = useState(false);
 
@@ -67,9 +68,15 @@ export default function AnnouncementsAdmin() {
                 type="button"
                 className={btn.quiet}
                 disabled={pending}
-                onClick={() => {
-                  if (confirm("Delete this announcement?")) run(() => deleteAnnouncement(a.id));
-                }}
+                onClick={() =>
+                  request({
+                    title: "Delete announcement",
+                    body: "It comes off the board families are watching.",
+                    confirmLabel: "Delete",
+                    tone: "whistle",
+                    run: () => deleteAnnouncement(a.id),
+                  })
+                }
               >
                 Delete
               </button>
@@ -77,6 +84,7 @@ export default function AnnouncementsAdmin() {
           ))}
         </ul>
       )}
+      {sheet}
     </>
   );
 }
