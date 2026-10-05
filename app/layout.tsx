@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, IBM_Plex_Mono, Sora } from "next/font/google";
 import { TournamentProvider } from "@/components/TournamentProvider";
 import { ServiceWorker } from "@/components/ServiceWorker";
-import { TOURNAMENT_NAME } from "@/lib/format";
 import { getSnapshot } from "@/lib/snapshot";
 import "./globals.css";
 
@@ -12,13 +11,16 @@ const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], var
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: TOURNAMENT_NAME,
-  description: "Live scores, bracket, and game times for the Metro-South 8th Grade Girls Volleyball tournament.",
-  applicationName: TOURNAMENT_NAME,
-  appleWebApp: { capable: true, title: "Metro-South", statusBarStyle: "default" },
-  icons: { icon: "/icons/192", apple: "/icons/180" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { info } = await getSnapshot();
+  return {
+    title: info.name,
+    description: `Live scores, bracket, and game times for ${info.name}.`,
+    applicationName: info.name,
+    appleWebApp: { capable: true, title: info.shortName, statusBarStyle: "default" },
+    icons: { icon: "/icons/192", apple: "/icons/180" },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#B7D0E8",

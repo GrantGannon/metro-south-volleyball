@@ -41,6 +41,8 @@ model Match {
 
   winnerId Int?
   winner   Team?   @relation("Winner", fields: [winnerId], references: [id], onDelete: SetNull)
+  /// Won without a played score. The winner still has to be advanced by hand.
+  forfeit  Boolean @default(false)
   advanced Boolean @default(false)
 
   winnerToId   String?
@@ -61,11 +63,15 @@ model Announcement {
 }
 
 model Settings {
-  id             Int  @id @default(1)
-  setsToWin      Int  @default(2)
-  setTarget      Int  @default(25)
-  decidingTarget Int  @default(15)
-  winBy          Int  @default(2)
+  id             Int    @id @default(1)
+  name           String @default("Metro-South 8th Grade Girls Volleyball")
+  shortName      String @default("Metro-South")
+  /// "single" or "double". Changing this does not rebuild games already saved.
+  format         String @default("double")
+  setsToWin      Int    @default(2)
+  setTarget      Int    @default(25)
+  decidingTarget Int    @default(15)
+  winBy          Int    @default(2)
   cap            Int?
-  version        Int  @default(0)
+  version        Int    @default(0)
 }

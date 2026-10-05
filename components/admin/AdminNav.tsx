@@ -15,7 +15,7 @@ const LINKS = [
 
 export function AdminNav() {
   const path = usePathname();
-  const { connected } = useTournament();
+  const { snapshot, connected } = useTournament();
   const wide = useBracketDesk();
   const frame = wide ? "mx-auto w-full max-w-xl px-4 lg:max-w-[90rem] lg:px-6" : "mx-auto max-w-xl px-4";
 
@@ -23,7 +23,7 @@ export function AdminNav() {
     <header className="sticky top-0 z-20 bg-tape text-sheet pt-[env(safe-area-inset-top)]">
       <div className={`${frame} flex items-center justify-between pt-3`}>
         <p className="text-[15px] font-bold">
-          Metro-South <span className="font-medium text-sheet/70">· Scorer’s table</span>
+          {snapshot.info.shortName} <span className="font-medium text-sheet/70">· Scorer’s table</span>
         </p>
         <div className="flex items-center gap-3">
           <span className="font-mono text-[11px] text-sheet/70">{connected ? "Synced" : "Reconnecting"}</span>

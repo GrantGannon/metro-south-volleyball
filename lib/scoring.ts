@@ -14,8 +14,9 @@ export interface ScoreState {
   pointsB: number;
 }
 
+/** The last possible set of a best of 3 or best of 5. A heads-up match is one regular set. */
 export function isDecidingSet(index: number, rules: Rules): boolean {
-  return index === rules.setsToWin * 2 - 2;
+  return rules.setsToWin > 1 && index === rules.setsToWin * 2 - 2;
 }
 
 export function targetForSet(index: number, rules: Rules): number {

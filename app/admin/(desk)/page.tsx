@@ -63,7 +63,7 @@ function Row({ match: m }: { match: MatchDTO }) {
   };
   const w = setsWon(m.sets);
   const score =
-    m.status === "live" ? `${m.pointsA}–${m.pointsB} · sets ${w.a}–${w.b}` : m.status === "final" ? `Sets ${w.a}–${w.b}` : null;
+    m.forfeit ? "Forfeit" : m.status === "live" ? `${m.pointsA}–${m.pointsB} · sets ${w.a}–${w.b}` : m.status === "final" ? `Sets ${w.a}–${w.b}` : null;
 
   return (
     <Link href={`/admin/match/${m.id}`} className="grid min-h-16 grid-cols-[3.5rem_1fr_auto] items-center gap-3 px-4 py-3">

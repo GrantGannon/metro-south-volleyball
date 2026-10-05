@@ -1,4 +1,13 @@
-import type { MatchDTO } from "./types";
+import type { BracketSide, MatchDTO, TournamentInfo } from "./types";
+
+export function bracketBands(info: TournamentInfo, matches: MatchDTO[]): { id: BracketSide; label: string }[] {
+  const has = (side: BracketSide) => matches.some((m) => m.side === side);
+  const single = info.format === "single" && !has("losers");
+  const bands: { id: BracketSide; label: string }[] = [{ id: "winners", label: single ? "Bracket" : "Winners" }];
+  if (info.format === "double" || has("losers")) bands.push({ id: "losers", label: "Losers" });
+  if (info.format === "double" || has("final")) bands.push({ id: "final", label: "Finals" });
+  return bands;
+}
 
 const time = (m: MatchDTO) => (m.startsAt ? Date.parse(m.startsAt) : Number.MAX_SAFE_INTEGER);
 const byTime = (a: MatchDTO, b: MatchDTO) => time(a) - time(b) || a.order - b.order;

@@ -3,11 +3,18 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const force = process.argv.includes("--reset") || process.env.TOURNAMENT_RESET === "1";
+const importDraw = force || process.argv.includes("--import") || process.env.TOURNAMENT_IMPORT === "1";
 
 async function main() {
   const existing = await prisma.team.count();
   if (existing > 0 && !force) {
     console.log(`Seed skipped: ${existing} teams already exist. Pass --reset to wipe and reseed.`);
+    return;
+  }
+
+  if (!importDraw) {
+    await prisma.settings.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } });
+    console.log("No draw imported. Add teams in Settings, then build a bracket.");
     return;
   }
 

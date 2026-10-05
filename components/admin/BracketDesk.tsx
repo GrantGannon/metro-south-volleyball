@@ -5,15 +5,10 @@ import { AddGame, MatchEditor } from "@/components/admin/MatchEditor";
 import { useTournament } from "@/components/TournamentProvider";
 import { feederLabel } from "@/lib/bracket";
 import { formatDayTime } from "@/lib/format";
-import type { BracketSide, MatchDTO, Side } from "@/lib/types";
+import type { MatchDTO, Side } from "@/lib/types";
+import { bracketBands } from "@/lib/view";
 
 type Place = { match: MatchDTO; col: number; rowStart: number; rowSpan: number };
-
-const BANDS: { side: BracketSide; title: string; layout: "tree" | "row" }[] = [
-  { side: "winners", title: "Winners", layout: "tree" },
-  { side: "losers", title: "Losers", layout: "tree" },
-  { side: "final", title: "Finals", layout: "row" },
-];
 
 function slotOrder(m: MatchDTO) {
   return m.winnerToSlot === "B" ? 1 : 0;
@@ -104,12 +99,12 @@ export function BracketDesk() {
         <p className="mt-2 mb-6 font-mono text-[12px] text-ink/70">Codes on the cards — W1, L3, F1 — are the names you edit. The printed sheet uses its own letters.</p>
 
         <div className="space-y-10">
-          {BANDS.map((band) => (
+          {bracketBands(snapshot.info, snapshot.matches).map((band) => (
             <Band
-              key={band.side}
-              title={band.title}
-              matches={snapshot.matches.filter((m) => m.side === band.side)}
-              layout={band.layout}
+              key={band.id}
+              title={band.label}
+              matches={snapshot.matches.filter((m) => m.side === band.id)}
+              layout={band.id === "final" ? "row" : "tree"}
               selectedId={selectedId}
               winnerDest={selected?.winnerToId ?? null}
               loserDest={selected?.loserToId ?? null}
@@ -247,7 +242,7 @@ function GameCard({
           <span className="font-mono text-[13px] font-semibold">
             {m.id}
             {m.status === "live" && <span className="ml-1.5 text-whistle">Live</span>}
-            {m.status === "final" && <span className="ml-1.5 text-ink/50">Final</span>}
+            {m.status === "final" && <span className="ml-1.5 text-ink/50">{m.forfeit ? "Forfeit" : "Final"}</span>}
           </span>
           <span className="truncate font-mono text-[11px] text-ink/60">
             {m.status === "bye" ? "Bye" : formatDayTime(m.startsAt)}

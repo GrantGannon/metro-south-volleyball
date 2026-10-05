@@ -15,15 +15,17 @@ const TABS = [
 ];
 
 export function Header() {
-  const { connected, receivedAt } = useTournament();
+  const { snapshot, connected, receivedAt } = useTournament();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const { name, shortName } = snapshot.info;
+  const rest = name.toLowerCase().startsWith(shortName.toLowerCase()) ? name.slice(shortName.length).trim() : name;
 
   return (
     <header className="mx-auto flex max-w-xl items-end justify-between gap-4 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
       <h1 className="leading-tight">
-        <span className="block text-[22px] font-bold tracking-tight">Metro-South</span>
-        <span className="block text-[14px] font-medium text-ink/75">8th Grade Girls Volleyball</span>
+        <span className="block text-[22px] font-bold tracking-tight">{shortName}</span>
+        {rest && <span className="block text-[14px] font-medium text-ink/75">{rest}</span>}
       </h1>
       {mounted && (
         <p className="pb-0.5 text-right font-mono text-[11px] text-ink/70" aria-live="polite">

@@ -1,6 +1,6 @@
 "use client";
 
-import { AddGame, MatchEditor, TeamEditor } from "@/components/admin/MatchEditor";
+import { AddGame, AddTeam, MatchEditor, TeamEditor } from "@/components/admin/MatchEditor";
 import { BracketDesk } from "@/components/admin/BracketDesk";
 import { useTournament } from "@/components/TournamentProvider";
 
@@ -18,8 +18,9 @@ export default function BracketEditor() {
             </li>
           ))}
         </ul>
+        <AddTeam />
 
-        <h2 className="mb-1 text-[13px] font-bold uppercase tracking-[0.08em] text-ink/70">Games</h2>
+        <h2 className="mb-1 mt-8 text-[13px] font-bold uppercase tracking-[0.08em] text-ink/70">Games</h2>
         <p className="mb-3 text-[13px] text-ink/70">Each game says where its winner and loser go. Times are Central. On a laptop this page opens the full bracket.</p>
         <ul className="space-y-2">
           {snapshot.matches.map((m) => (
@@ -42,6 +43,7 @@ export default function BracketEditor() {
               </li>
             ))}
           </ul>
+          <AddTeam />
         </details>
       </div>
     </>

@@ -18,6 +18,7 @@ function match(id: string, over: Partial<MatchDTO> = {}): MatchDTO {
     pointsA: 0,
     pointsB: 0,
     winnerId: null,
+    forfeit: false,
     advanced: false,
     winnerToId: null,
     winnerToSlot: null,

@@ -3,6 +3,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Snapshot, TeamDTO } from "@/lib/types";
 
+const FALLBACK_INFO: Snapshot["info"] = {
+  name: "Metro-South 8th Grade Girls Volleyball",
+  shortName: "Metro-South",
+  format: "double",
+};
+
+function complete(snap: Snapshot): Snapshot {
+  return { ...snap, info: snap.info ?? FALLBACK_INFO };
+}
+
 const STORAGE_KEY = "msv:snapshot";
 
 interface TournamentState {
@@ -16,18 +26,19 @@ interface TournamentState {
 const TournamentContext = createContext<TournamentState | null>(null);
 
 export function TournamentProvider({ initial, children }: { initial: Snapshot; children: React.ReactNode }) {
-  const [snapshot, setSnapshot] = useState(initial);
+  const [snapshot, setSnapshot] = useState(() => complete(initial));
   const [connected, setConnected] = useState(true);
   const [receivedAt, setReceivedAt] = useState(() => Date.now());
   const versionRef = useRef(initial.version);
 
   const accept = useCallback((snap: Snapshot) => {
-    if (snap.version < versionRef.current) return;
-    versionRef.current = snap.version;
-    setSnapshot(snap);
+    const next = complete(snap);
+    if (next.version < versionRef.current) return;
+    versionRef.current = next.version;
+    setSnapshot(next);
     setReceivedAt(Date.now());
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {}
   }, []);
 

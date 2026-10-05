@@ -2,6 +2,13 @@ export type Side = "A" | "B";
 export type SetScore = [number, number];
 export type MatchStatus = "scheduled" | "live" | "final" | "bye";
 export type BracketSide = "winners" | "losers" | "final";
+export type BracketFormat = "single" | "double";
+
+export interface TournamentInfo {
+  name: string;
+  shortName: string;
+  format: BracketFormat;
+}
 
 export interface Rules {
   setsToWin: number;
@@ -34,6 +41,7 @@ export interface MatchDTO {
   pointsA: number;
   pointsB: number;
   winnerId: number | null;
+  forfeit: boolean;
   advanced: boolean;
   winnerToId: string | null;
   winnerToSlot: Side | null;
@@ -52,6 +60,7 @@ export interface Snapshot {
   teams: TeamDTO[];
   matches: MatchDTO[];
   announcements: AnnouncementDTO[];
+  info: TournamentInfo;
   rules: Rules;
   version: number;
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import { EventEmitter } from "node:events";
 import { prisma } from "./db";
-import type { MatchDTO, Rules, SetScore, Snapshot } from "./types";
+import type { BracketFormat, MatchDTO, Rules, SetScore, Snapshot, TournamentInfo } from "./types";
 
 const globalForEvents = globalThis as unknown as { tournamentEvents?: EventEmitter };
 export const tournamentEvents = globalForEvents.tournamentEvents ?? new EventEmitter();
@@ -31,6 +31,7 @@ export function toMatchDTO(m: MatchRow): MatchDTO {
     pointsA: m.pointsA,
     pointsB: m.pointsB,
     winnerId: m.winnerId,
+    forfeit: m.forfeit,
     advanced: m.advanced,
     winnerToId: m.winnerToId,
     winnerToSlot: m.winnerToSlot as MatchDTO["winnerToSlot"],
@@ -45,20 +46,41 @@ export async function loadMatches(): Promise<MatchDTO[]> {
   return rows.map(toMatchDTO);
 }
 
+const FALLBACK_INFO: TournamentInfo = {
+  name: "Metro-South 8th Grade Girls Volleyball",
+  shortName: "Metro-South",
+  format: "double",
+};
+
+export function readInfo(row: { name?: string | null; shortName?: string | null; format?: string | null } | null): TournamentInfo {
+  const format: BracketFormat = row?.format === "single" ? "single" : "double";
+  return {
+    name: row?.name?.trim() || FALLBACK_INFO.name,
+    shortName: row?.shortName?.trim() || FALLBACK_INFO.shortName,
+    format,
+  };
+}
+
 export async function getSnapshot(): Promise<Snapshot> {
-  const [teams, matches, announcements, rules] = await Promise.all([
+  const [teams, matches, announcements, settings] = await Promise.all([
     prisma.team.findMany({ orderBy: { seed: "asc" } }),
     loadMatches(),
     prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 30 }),
-    getRules(),
+    prisma.settings.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } }),
   ]);
-  const { version, ...r } = rules;
   return {
     teams: teams.map((t) => ({ id: t.id, name: t.name, shortName: t.shortName, seed: t.seed })),
     matches,
     announcements: announcements.map((a) => ({ id: a.id, body: a.body, createdAt: a.createdAt.toISOString() })),
-    rules: r,
-    version,
+    info: readInfo(settings),
+    rules: {
+      setsToWin: settings.setsToWin,
+      setTarget: settings.setTarget,
+      decidingTarget: settings.decidingTarget,
+      winBy: settings.winBy,
+      cap: settings.cap,
+    },
+    version: settings.version,
   };
 }
 

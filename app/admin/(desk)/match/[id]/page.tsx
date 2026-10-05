@@ -6,6 +6,7 @@ import { useState } from "react";
 import {
   advanceWinner,
   clearScore,
+  forfeitGame,
   scorePoint,
   setScore,
   startGame,
@@ -32,7 +33,7 @@ export default function ScorerPage() {
     );
   }
 
-  const canScore = Boolean(m.teamAId && m.teamBId) && !m.advanced && m.status !== "bye";
+  const canScore = Boolean(m.teamAId && m.teamBId) && !m.advanced && m.status !== "bye" && !m.forfeit;
   const winner = m.winnerId ? teams.get(m.winnerId) : undefined;
   const isFirstFinal = m.side === "final" && !m.isReset;
 
@@ -91,7 +92,7 @@ export default function ScorerPage() {
       <p className="mt-3 font-mono text-[12px] text-ink/70">
         {m.status === "live" && `Set ${m.sets.length + 1} to ${targetForSet(m.sets.length, snapshot.rules)}, win by ${snapshot.rules.winBy}.`}
         {m.status === "scheduled" && (canScore ? "Tap +1 or Start game to go live." : "Waiting for both teams.")}
-        {m.status === "final" && winner && `${winner.name} won.`}
+        {m.status === "final" && winner && (m.forfeit ? `${winner.name} won by forfeit.` : `${winner.name} won.`)}
       </p>
 
       <div className="mt-3">
@@ -122,18 +123,22 @@ export default function ScorerPage() {
       </div>
 
       {canScore && <CorrectScore match={m} />}
+      <Forfeit match={m} />
 
       <div className="mt-8 flex flex-wrap items-center gap-4 border-t border-tape/15 pt-4">
         <Link href={`/admin/bracket#${m.id}`} className={`${btn.quiet} inline-flex items-center`}>
           Edit time, court, or teams
         </Link>
-        {canScore && (m.status === "live" || m.status === "final") && (
+        {(canScore || m.forfeit) && (m.status === "live" || m.status === "final") && (
           <button
             type="button"
             className={btn.quiet}
             disabled={pending}
             onClick={() => {
-              if (confirm(`Clear every set and point for ${m.id} and mark it not started?`)) run(() => clearScore(m.id));
+              const message = m.forfeit
+                ? `Clear the forfeit for ${m.id} and mark it not started?`
+                : `Clear every set and point for ${m.id} and mark it not started?`;
+              if (confirm(message)) run(() => clearScore(m.id));
             }}
           >
             Clear score
@@ -141,6 +146,38 @@ export default function ScorerPage() {
         )}
       </div>
     </>
+  );
+}
+
+function Forfeit({ match: m }: { match: MatchDTO }) {
+  const { teams } = useTournament();
+  const { run, pending, error } = useAdminAction();
+  const top = m.teamAId ? teams.get(m.teamAId) : undefined;
+  const bottom = m.teamBId ? teams.get(m.teamBId) : undefined;
+  if (!top || !bottom || m.advanced || m.status === "bye") return null;
+
+  const award = (winner: typeof top, other: typeof top) => {
+    const replacing = m.forfeit || m.sets.length > 0 || m.pointsA > 0 || m.pointsB > 0 || m.status === "final";
+    const message = `${winner.name} wins by forfeit. ${other.name} takes the loss.${replacing ? " This replaces the score." : ""} Advance the winner afterward.`;
+    if (confirm(message)) run(() => forfeitGame(m.id, winner.id));
+  };
+
+  return (
+    <section className="mt-8 rounded-xl bg-sheet p-4">
+      <h2 className="text-[15px] font-bold">Forfeit</h2>
+      <p className="mb-3 text-[13px] text-ink/70">Award the win without playing the game. The winner still has to be advanced, the same as a scored game.</p>
+      <div className="flex flex-col gap-2">
+        <button type="button" className={btn.secondary} disabled={pending} onClick={() => award(top, bottom)}>
+          {top.name} wins by forfeit
+        </button>
+        <button type="button" className={btn.secondary} disabled={pending} onClick={() => award(bottom, top)}>
+          {bottom.name} wins by forfeit
+        </button>
+      </div>
+      <div className="mt-3">
+        <ErrorNote error={error} />
+      </div>
+    </section>
   );
 }
 

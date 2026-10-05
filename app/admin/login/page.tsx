@@ -1,15 +1,17 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTournament } from "@/components/TournamentProvider";
 import { login } from "../actions";
 
 export default function LoginPage() {
   const [error, action, pending] = useActionState(login, null);
+  const { snapshot } = useTournament();
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5">
-      <p className="text-[22px] font-bold tracking-tight">Metro-South</p>
-      <p className="mb-8 text-[14px] font-medium text-ink/75">8th Grade Girls Volleyball · Scorer’s table</p>
+      <p className="text-[22px] font-bold tracking-tight">{snapshot.info.shortName}</p>
+      <p className="mb-8 text-[14px] font-medium text-ink/75">{snapshot.info.name} · Scorer’s table</p>
       <form action={action} className="rounded-xl bg-sheet p-5">
         <label htmlFor="password" className="mb-2 block text-[14px] font-semibold">
           Admin password

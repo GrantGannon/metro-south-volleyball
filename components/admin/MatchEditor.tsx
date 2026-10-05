@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { addMatch, deleteMatch, updateMatch, updateTeam, type MatchEdit } from "@/app/admin/actions";
+import { addMatch, addTeam, deleteMatch, deleteTeam, updateMatch, updateTeam, type MatchEdit } from "@/app/admin/actions";
 import { btn, ErrorNote, field, useAdminAction } from "@/components/admin/useAdminAction";
 import { useTournament } from "@/components/TournamentProvider";
 import { slotLabel } from "@/lib/bracket";
@@ -10,10 +10,6 @@ import type { BracketSide, MatchDTO, MatchStatus, Side, TeamDTO } from "@/lib/ty
 
 const SIDE_LABEL: Record<BracketSide, string> = { winners: "Winners", losers: "Losers", final: "Finals" };
 const SIDE_ORDER: Record<BracketSide, number> = { winners: 0, losers: 1, final: 2 };
-const DAYS = [
-  { value: "2026-10-02", label: "Friday" },
-  { value: "2026-10-03", label: "Saturday" },
-];
 const MINUTES = ["00", "15", "30", "45"];
 
 function splitStart(value: string) {
@@ -65,11 +61,23 @@ export function TeamEditor({ team }: { team: TeamDTO }) {
           <input value={shortName} onChange={(e) => setShortName(e.target.value)} className={field} />
         </label>
       </div>
-      {dirty && (
-        <button type="button" className={`${btn.primary} mt-2`} disabled={pending} onClick={() => run(() => updateTeam(team.id, name, shortName, Number(seed)))}>
-          Save team
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        {dirty && (
+          <button type="button" className={btn.primary} disabled={pending} onClick={() => run(() => updateTeam(team.id, name, shortName, Number(seed)))}>
+            Save team
+          </button>
+        )}
+        <button
+          type="button"
+          className={btn.quiet}
+          disabled={pending}
+          onClick={() => {
+            if (confirm(`Remove ${team.name}?`)) run(() => deleteTeam(team.id));
+          }}
+        >
+          Remove
         </button>
-      )}
+      </div>
       <div className="mt-2">
         <ErrorNote error={error} />
       </div>
@@ -182,7 +190,6 @@ export function MatchEditor({ match: m, panel, onClose }: { match: MatchDTO; pan
     );
   };
   const start = splitStart(edit.startsAt);
-  const days = DAYS.some((d) => d.value === start.date) ? DAYS : [{ value: start.date, label: start.date }, ...DAYS];
   const setStart = (patch: Partial<ReturnType<typeof splitStart>>) => {
     const next = { ...start, ...patch };
     set("startsAt", joinStart(next.date, next.hour12, next.minute, next.ap));
@@ -203,14 +210,8 @@ export function MatchEditor({ match: m, panel, onClose }: { match: MatchDTO; pan
           <input value={edit.court} onChange={(e) => set("court", e.target.value)} className={field} placeholder="Court 1" />
         </label>
         <label className="text-[12px] font-semibold text-ink/70">
-          Day
-          <select value={start.date} onChange={(e) => setStart({ date: e.target.value })} className={field}>
-            {days.map((d) => (
-              <option key={d.value} value={d.value}>
-                {d.label}
-              </option>
-            ))}
-          </select>
+          Date
+          <input type="date" value={start.date} onChange={(e) => setStart({ date: e.target.value })} className={field} />
         </label>
       </div>
       <div className="grid grid-cols-3 gap-2">
@@ -310,6 +311,32 @@ export function MatchEditor({ match: m, panel, onClose }: { match: MatchDTO; pan
         </button>
       </div>
     </div>
+  );
+}
+
+export function AddTeam() {
+  const { run, pending, error } = useAdminAction();
+  const [name, setName] = useState("");
+
+  return (
+    <form
+      className="mt-3 flex flex-wrap items-end gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        run(() => addTeam(name), () => setName(""));
+      }}
+    >
+      <label className="min-w-0 flex-1 text-[12px] font-semibold text-ink/70">
+        Add a team
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="School or club" className={field} />
+      </label>
+      <button type="submit" className={btn.primary} disabled={pending || !name.trim()}>
+        Add
+      </button>
+      <div className="basis-full">
+        <ErrorNote error={error} />
+      </div>
+    </form>
   );
 }
 

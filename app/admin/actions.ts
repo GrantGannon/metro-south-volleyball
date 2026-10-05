@@ -3,11 +3,12 @@
 import { redirect } from "next/navigation";
 import { checkPassword, endSession, isAdmin, startSession } from "@/lib/auth";
 import { planAdvance, planFillReset, planUndoAdvance, type MatchPatch } from "@/lib/bracket";
+import { buildBracket } from "@/lib/draw";
 import { prisma } from "@/lib/db";
 import { fromLocalInput } from "@/lib/format";
 import { addPoint, applyManual, matchWinner } from "@/lib/scoring";
 import { getRules, getSnapshot, loadMatches, publish, toMatchDTO } from "@/lib/snapshot";
-import type { MatchDTO, MatchStatus, Side, SetScore, Snapshot } from "@/lib/types";
+import type { BracketFormat, MatchDTO, MatchStatus, Side, SetScore, Snapshot } from "@/lib/types";
 
 export type ActionResult = { ok: true; snapshot: Snapshot } | { ok: false; error: string };
 
@@ -60,7 +61,7 @@ async function saveScore(m: MatchDTO, sets: SetScore[], pointsA: number, pointsB
   const winnerId = winSide === "A" ? m.teamAId : winSide === "B" ? m.teamBId : null;
   await prisma.match.update({
     where: { id: m.id },
-    data: { sets, pointsA, pointsB, winnerId, status: winnerId ? "final" : "live" },
+    data: { sets, pointsA, pointsB, winnerId, forfeit: false, status: winnerId ? "final" : "live" },
   });
 }
 
@@ -70,6 +71,7 @@ export async function scorePoint(id: string, side: Side, delta: 1 | -1): Promise
     if (!m) return `Game ${id} does not exist.`;
     if (!m.teamAId || !m.teamBId) return "Both teams need to be set before scoring.";
     if (m.advanced) return "This game has been advanced. Undo the advance to change the score.";
+    if (m.forfeit) return "This game was awarded by forfeit. Clear the score to play it.";
     const rules = await getRules();
     const next = addPoint(m, side, delta, rules);
     await saveScore(m, next.sets, next.pointsA, next.pointsB);
@@ -82,6 +84,7 @@ export async function setScore(id: string, sets: SetScore[], pointsA: number, po
     if (!m) return `Game ${id} does not exist.`;
     if (!m.teamAId || !m.teamBId) return "Both teams need to be set before scoring.";
     if (m.advanced) return "This game has been advanced. Undo the advance to change the score.";
+    if (m.forfeit) return "This game was awarded by forfeit. Clear the score to play it.";
     const result = applyManual({ sets, pointsA, pointsB }, await getRules());
     if (!result.ok) return result.error;
     await saveScore(m, result.state.sets, result.state.pointsA, result.state.pointsB);
@@ -105,12 +108,27 @@ export async function clearScore(id: string): Promise<ActionResult> {
     if (m.advanced) return "This game has been advanced. Undo the advance first.";
     await prisma.match.update({
       where: { id },
-      data: { status: "scheduled", sets: [], pointsA: 0, pointsB: 0, winnerId: null },
+      data: { status: "scheduled", sets: [], pointsA: 0, pointsB: 0, winnerId: null, forfeit: false },
     });
   });
 }
 
 /* Advancing */
+
+export async function forfeitGame(id: string, winnerId: number): Promise<ActionResult> {
+  return write(async () => {
+    const m = await getMatch(id);
+    if (!m) return `Game ${id} does not exist.`;
+    if (m.status === "bye") return "A bye has no forfeit.";
+    if (!m.teamAId || !m.teamBId) return "Both teams need to be set before a forfeit.";
+    if (winnerId !== m.teamAId && winnerId !== m.teamBId) return "The winner has to be one of the teams in this game.";
+    if (m.advanced) return "This game has been advanced. Undo the advance first.";
+    await prisma.match.update({
+      where: { id },
+      data: { status: "final", winnerId, forfeit: true, sets: [], pointsA: 0, pointsB: 0 },
+    });
+  });
+}
 
 export async function advanceWinner(id: string): Promise<ActionResult> {
   return write(async () => {
@@ -194,7 +212,8 @@ export async function updateMatch(id: string, edit: MatchEdit): Promise<ActionRe
         loserToId: edit.loserToId,
         loserToSlot: edit.loserToId ? edit.loserToSlot : null,
         isReset: edit.isReset,
-        ...(status === "bye" ? { winnerId: byeWinner, sets: [], pointsA: 0, pointsB: 0 } : {}),
+        ...(status === "bye" ? { winnerId: byeWinner, forfeit: false, sets: [], pointsA: 0, pointsB: 0 } : {}),
+        ...(status !== "final" ? { forfeit: false } : {}),
         ...(m.status === "bye" && status !== "bye" ? { winnerId: null, advanced: false } : {}),
       },
     });
@@ -256,14 +275,88 @@ export async function deleteAnnouncement(id: number): Promise<ActionResult> {
 
 /* Settings */
 
-export async function updateRules(r: { setTarget: number; decidingTarget: number; winBy: number; cap: number | null }): Promise<ActionResult> {
+export async function addTeam(name: string): Promise<ActionResult> {
   return write(async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return "Team name can't be empty.";
+    const count = await prisma.team.count();
+    if (count >= 32) return "32 teams is the maximum.";
+    const short = trimmed.split(/\s+/)[0].slice(0, 12);
+    await prisma.team.create({ data: { name: trimmed, shortName: short, seed: count + 1 } });
+  });
+}
+
+export async function deleteTeam(id: number): Promise<ActionResult> {
+  return write(async () => {
+    const started = await prisma.match.findFirst({
+      where: { OR: [{ teamAId: id }, { teamBId: id }, { winnerId: id }], status: { in: ["live", "final"] } },
+    });
+    if (started) return "This team is in a game that already started.";
+    await prisma.team.delete({ where: { id } });
+  });
+}
+
+export async function updateTournament(input: { name: string; shortName: string; format: BracketFormat }): Promise<ActionResult> {
+  return write(async () => {
+    const name = input.name.trim();
+    const shortName = input.shortName.trim();
+    if (!name) return "The tournament needs a name.";
+    if (!shortName) return "The short name is what shows in the header.";
+    if (input.format !== "single" && input.format !== "double") return "Choose single or double elimination.";
+    await prisma.settings.update({ where: { id: 1 }, data: { name, shortName, format: input.format } });
+  });
+}
+
+export async function buildGeneratedBracket(): Promise<ActionResult> {
+  return write(async () => {
+    const [settings, teams] = await Promise.all([
+      prisma.settings.findUnique({ where: { id: 1 } }),
+      prisma.team.findMany({ orderBy: { seed: "asc" } }),
+    ]);
+    const format: BracketFormat = settings?.format === "single" ? "single" : "double";
+    const ranked = [...teams].sort((a, b) => a.seed - b.seed || a.id - b.id);
+    const draw = buildBracket(ranked.map((_, i) => i + 1), format);
+    if (!draw.ok) return draw.error;
+    const idBySeed = new Map(ranked.map((t, i) => [i + 1, t.id]));
+    await prisma.match.deleteMany();
+    const placed = new Map<string, number>();
+    for (const [order, m] of draw.matches.entries()) {
+      const teamAId = m.teamA ? idBySeed.get(m.teamA) ?? null : null;
+      const teamBId = m.teamB ? idBySeed.get(m.teamB) ?? null : null;
+      const bye = m.status === "bye" && teamAId;
+      if (bye && m.winnerTo) placed.set(`${m.winnerTo[0]}:${m.winnerTo[1]}`, teamAId);
+      await prisma.match.create({
+        data: {
+          id: m.id,
+          order,
+          side: m.side,
+          round: m.round,
+          roundLabel: m.roundLabel,
+          status: bye ? "bye" : "scheduled",
+          teamAId: placed.get(`${m.id}:A`) ?? teamAId,
+          teamBId: placed.get(`${m.id}:B`) ?? teamBId,
+          winnerId: bye ? teamAId : null,
+          advanced: Boolean(bye),
+          winnerToId: m.winnerTo?.[0] ?? null,
+          winnerToSlot: m.winnerTo?.[1] ?? null,
+          loserToId: m.loserTo?.[0] ?? null,
+          loserToSlot: m.loserTo?.[1] ?? null,
+          isReset: Boolean(m.isReset),
+        },
+      });
+    }
+  });
+}
+
+export async function updateRules(r: { setsToWin: number; setTarget: number; decidingTarget: number; winBy: number; cap: number | null }): Promise<ActionResult> {
+  return write(async () => {
+    if (![1, 2, 3].includes(r.setsToWin)) return "Choose heads up, best of 3, or best of 5.";
     const nums = [r.setTarget, r.decidingTarget, r.winBy];
     if (nums.some((n) => !Number.isInteger(n) || n < 1)) return "Targets and win-by need whole numbers, 1 or higher.";
     if (r.cap != null && (!Number.isInteger(r.cap) || r.cap <= r.setTarget)) return "The cap has to be higher than the set target.";
     await prisma.settings.update({
       where: { id: 1 },
-      data: { setTarget: r.setTarget, decidingTarget: r.decidingTarget, winBy: r.winBy, cap: r.cap },
+      data: { setsToWin: r.setsToWin, setTarget: r.setTarget, decidingTarget: r.decidingTarget, winBy: r.winBy, cap: r.cap },
     });
   });
 }

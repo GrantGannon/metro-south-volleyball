@@ -1,4 +1,3 @@
-export const TOURNAMENT_NAME = "Metro-South 8th Grade Girls Volleyball";
 export const TIME_ZONE = "America/Chicago";
 
 const dayTime = new Intl.DateTimeFormat("en-US", {

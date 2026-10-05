@@ -1,11 +1,14 @@
 import type { MetadataRoute } from "next";
-import { TOURNAMENT_NAME } from "@/lib/format";
+import { connection } from "next/server";
+import { getSnapshot } from "@/lib/snapshot";
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  await connection();
+  const { info } = await getSnapshot();
   return {
-    name: TOURNAMENT_NAME,
-    short_name: "Metro-South",
-    description: "Live scores, bracket, and game times.",
+    name: info.name,
+    short_name: info.shortName,
+    description: `Live scores, bracket, and game times for ${info.name}.`,
     start_url: "/",
     scope: "/",
     display: "standalone",

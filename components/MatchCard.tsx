@@ -25,7 +25,7 @@ export function StatusLabel({ match }: { match: MatchDTO }) {
       </span>
     );
   }
-  if (match.status === "final") return <span className="font-semibold">Final</span>;
+  if (match.status === "final") return <span className="font-semibold">{match.forfeit ? "Forfeit" : "Final"}</span>;
   if (match.status === "bye") return <span>Bye</span>;
   return <span className="font-mono">{formatDayTime(match.startsAt)}</span>;
 }
@@ -111,7 +111,7 @@ export function MatchCard({ match, highlightTeamId, showRouting, renderPoints, f
           {points}
         </span>
       );
-    } else if (match.status === "final") {
+    } else if (match.status === "final" && !match.forfeit) {
       numeral = <span className={["font-jersey text-[40px] leading-none font-black tabular-nums", lost ? "text-ink/45" : ""].join(" ")}>{setCount}</span>;
     }
 
@@ -121,7 +121,7 @@ export function MatchCard({ match, highlightTeamId, showRouting, renderPoints, f
         <div className="min-w-0 flex-1">{name}</div>
       </div>
     );
-    const showSets = match.status !== "scheduled" || match.sets.length > 0;
+    const showSets = !match.forfeit && (match.status !== "scheduled" || match.sets.length > 0);
     const sets = showSets && <div className={["pl-[2.625rem]", side === "A" ? "mt-1.5" : "mb-1.5"].join(" ")}>{setRow}</div>;
 
     return (
