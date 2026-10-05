@@ -4,6 +4,8 @@ A phone-friendly website for running a school or club volleyball tournament. Fam
 
 It was built for the 2026 Metro-South 8th Grade Girls Volleyball tournament, where it ran a 12-team double-elimination weekend. Clone it, point it at a database, and run your own.
 
+**Note:** Provided as-is. This project is not actively maintained. Pull requests may not be reviewed.
+
 ## What it does
 
 **For families (no login)**
